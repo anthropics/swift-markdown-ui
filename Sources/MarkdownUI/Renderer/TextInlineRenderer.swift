@@ -19,6 +19,9 @@ extension Sequence where Element == InlineNode {
 }
 
 private struct TextInlineRenderer {
+
+  private var intermediateResults = [Text]()
+
   var result = Text("")
 
   private let baseURL: URL?
@@ -43,6 +46,28 @@ private struct TextInlineRenderer {
     for inline in inlines {
       self.render(inline)
     }
+    self.result = Self.mergeTexts(self.intermediateResults)
+  }
+
+  // Function that takes a list of Text items and concatenates them log(n) like a merge in merge sort. Outer func takes arry, inner takex ArraySlice
+
+  private static func mergeTexts(_ texts: [Text]) -> Text {
+    return mergeTextsInner(texts[...])
+  }
+
+  private static func mergeTextsInner(_ texts: ArraySlice<Text>) -> Text {
+    if texts.isEmpty {
+      return Text("")
+    }
+    if texts.count == 1 {
+      return texts[texts.startIndex]
+    }
+
+    let mid = texts.startIndex + (texts.count / 2)
+    let left = mergeTextsInner(texts[..<mid])
+    let right = mergeTextsInner(texts[mid...])
+
+    return left + right
   }
 
   private mutating func render(_ inline: InlineNode) {
@@ -93,19 +118,19 @@ private struct TextInlineRenderer {
 
   private mutating func renderImage(_ source: String) {
     if let image = self.images[source] {
-      self.result = self.result + Text(image)
+      self.intermediateResults.append(Text(image))
     }
   }
 
   private mutating func defaultRender(_ inline: InlineNode) {
-    self.result =
-      self.result
-      + Text(
+    self.intermediateResults.append(
+      Text(
         inline.renderAttributedString(
           baseURL: self.baseURL,
           textStyles: self.textStyles,
           attributes: self.attributes
         )
       )
+    )
   }
 }
